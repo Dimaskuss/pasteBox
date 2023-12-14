@@ -27,14 +27,21 @@ public class PasteBoxRepositoryImplMap implements PasteBoxRepository{
     @Override
     public List<PasteBoxEntity> getListOfPublicAndAlive(int amount) {
         LocalDateTime now = LocalDateTime.now();
+        System.out.println(now);
 
-
-        return rep.values().stream()
+        List<PasteBoxEntity> resultList = rep.values().stream()
+                .peek(pasteBoxEntity -> System.out.println("Before filter: " + pasteBoxEntity))
                 .filter(PasteBoxEntity::isPublic)
+                .peek(pasteBoxEntity -> System.out.println("After public filter: " + pasteBoxEntity))
                 .filter(pasteBoxEntity -> pasteBoxEntity.getLifeTime().isAfter(now))
+                .peek(pasteBoxEntity -> System.out.println("After time filter: " + pasteBoxEntity))
                 .sorted(Comparator.comparing(PasteBoxEntity::getId).reversed())
+                .peek(pasteBoxEntity -> System.out.println("After sorting: " + pasteBoxEntity))
                 .limit(amount)
                 .collect(Collectors.toList());
+
+        System.out.println("Filtered and sorted list: " + resultList);
+        return resultList;
 
     }
 

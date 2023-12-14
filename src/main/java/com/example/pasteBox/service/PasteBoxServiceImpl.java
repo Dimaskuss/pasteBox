@@ -7,23 +7,27 @@ import com.example.pasteBox.api.response.PasteBoxUrlResponse;
 import com.example.pasteBox.repository.PasteBoxEntity;
 import com.example.pasteBox.repository.PasteBoxRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+
 
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
 
-@ConfigurationProperties(prefix = "app")
 public class PasteBoxServiceImpl implements PasteBoxService {
 
-private String host;
-private int publicListSize;
+    private final String host = "http://asc.ru";
+    private final int publicListSize = 5;
     private final PasteBoxRepository repository;
-    private final AtomicInteger generateId = new AtomicInteger(0);
+    private final AtomicInteger generateId = new AtomicInteger(1);
+//    private List<PasteBoxEntity> list = new ArrayList<>();
 
     @Override
     public PasteBoxResponse getByHash(String hash) {
@@ -31,10 +35,19 @@ private int publicListSize;
         return new PasteBoxResponse(pasteBoxEntity.getData(), pasteBoxEntity.isPublic());
     }
 
-    @Override
     public List<PasteBoxResponse> getFirstPublicPasteBox() {
-//        return repository.getListOfPublicAndAlive(publicListSize);
-        return null;
+        try {
+            List<PasteBoxEntity> list = repository.getListOfPublicAndAlive(publicListSize);
+
+            System.out.println("List from repository: " + list); // добавьте эту строку
+
+            return list.stream().map(pasteBoxEntity ->
+                            new PasteBoxResponse(pasteBoxEntity.getData(), pasteBoxEntity.isPublic()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get first public paste box", e);
+        }
     }
 
     @Override
@@ -45,9 +58,10 @@ private int publicListSize;
         pasteBoxEntity.setId(hash);
         pasteBoxEntity.setHash(Integer.toHexString(hash));
         pasteBoxEntity.setPublic(request.getPublicStatus() == PublicStatus.PUBLIC);
+        pasteBoxEntity.setLifeTime(LocalDateTime.now().plusSeconds(request.getExpirationTimeSeconds()));
         repository.add(pasteBoxEntity);
 
-        return new PasteBoxUrlResponse(host+"/"+pasteBoxEntity.getHash());
+        return new PasteBoxUrlResponse(host + "/" + pasteBoxEntity.getHash());
     }
 
     private int generateId() {
